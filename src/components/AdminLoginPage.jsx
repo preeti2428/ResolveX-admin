@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
     setError('');
 
     try {
-      const res = await login(email, password, 'admin');
+      const res = await login(email, password, null);
       if (!res.success) {
         setError(res.message || 'Login failed.');
       }
@@ -124,9 +124,9 @@ export default function AdminLoginPage() {
         </form>
 
         {/* Demo Fast Prefill */}
-        <div className="mt-6 pt-6 border-t border-slate-700/60 text-center">
-          <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-3">
-            Demo Administrator Credentials
+        <div className="mt-6 pt-6 border-t border-slate-700/60 text-center space-y-2">
+          <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-2">
+            Demo Authority Credentials
           </p>
           <button
             type="button"
@@ -140,6 +140,30 @@ export default function AdminLoginPage() {
             <span>HOD: admin@aiml.edu</span>
             <span className="text-slate-400">Pass: Admin@123</span>
           </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('infra@aiml.edu');
+                setPassword('Infra@123');
+                setError('');
+              }}
+              className="py-1.5 px-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-amber-300 font-medium transition-colors text-center"
+            >
+              Infra: infra@aiml.edu
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('it_infra@aiml.edu');
+                setPassword('ItInfra@123');
+                setError('');
+              }}
+              className="py-1.5 px-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-indigo-300 font-medium transition-colors text-center"
+            >
+              IT: it_infra@aiml.edu
+            </button>
+          </div>
         </div>
 
         {/* Google SSO */}

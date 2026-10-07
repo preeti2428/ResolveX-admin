@@ -154,7 +154,7 @@ export default function ComplaintLetterModal({ grievance, onClose }) {
               3. Description of Incident / Grievance Statement
             </h3>
             <div className="p-4 border border-slate-200 rounded-lg text-xs leading-relaxed bg-slate-50 text-slate-900 font-sans whitespace-pre-wrap">
-              {grievance.description}
+              {grievance.description || 'No detailed description provided.'}
             </div>
           </div>
 

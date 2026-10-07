@@ -31,8 +31,28 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
   // Admin action states
   const [newStatus, setNewStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
+  const [resolutionPhoto, setResolutionPhoto] = useState(null);
+  const fileInputRef = React.useRef(null);
   const [updating, setUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState('');
+
+  const [assignedDept, setAssignedDept] = useState('none');
+  const [assigning, setAssigning] = useState(false);
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setResolutionPhoto(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Discussion & Comments states
   const [commentText, setCommentText] = useState('');
@@ -57,11 +77,37 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
         setGrievance(res.grievance);
         setNewStatus(res.grievance.status);
         setAdminNotes(res.grievance.admin_notes || '');
+        setResolutionPhoto(res.grievance.resolution_photo_url || null);
+        setAssignedDept(res.grievance.assigned_department || 'none');
       }
     } catch (err) {
       setError(err.message || 'Failed to load grievance details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    setAssigning(true);
+    setError('');
+    setUpdateSuccess('');
+
+    try {
+      const res = await apiRequest(`/api/grievances/${grievanceId}/assign`, {
+        method: 'PATCH',
+        body: JSON.stringify({ assigned_department: assignedDept === 'none' ? null : assignedDept }),
+      });
+
+      if (res.success) {
+        setUpdateSuccess(res.message || 'Grievance assigned successfully');
+        loadGrievanceDetails();
+        if (onStatusUpdated) onStatusUpdated();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to assign grievance');
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -77,6 +123,7 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
         body: JSON.stringify({
           status: newStatus,
           admin_notes: adminNotes.trim(),
+          resolution_photo_url: newStatus === 'resolved' ? resolutionPhoto : undefined,
         }),
       });
 
@@ -218,7 +265,7 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                   Issue Statement & Description
                 </h4>
                 <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed shadow-sm">
-                  {grievance.description}
+                  {grievance.description || 'No detailed description provided.'}
                 </div>
               </div>
 
@@ -290,9 +337,37 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                     <MessageSquare size={14} />
                     Official Department Action Note
                   </div>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 mb-3">
                     {grievance.admin_notes}
                   </p>
+                  {grievance.resolution_photo_url && (
+                    <div className="mt-3 border-t border-indigo-200/50 pt-3">
+                      <p className="text-xs font-semibold text-indigo-600 mb-2">Resolution Proof:</p>
+                      <a href={grievance.resolution_photo_url} target="_blank" rel="noreferrer">
+                        <img 
+                          src={grievance.resolution_photo_url} 
+                          alt="Resolution Proof" 
+                          className="max-w-full sm:max-w-xs rounded-xl border border-indigo-200 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
+                        />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {!grievance.admin_notes && grievance.resolution_photo_url && (
+                <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-3">
+                    <CheckCircle size={14} />
+                    Resolution Proof Photo
+                  </div>
+                  <a href={grievance.resolution_photo_url} target="_blank" rel="noreferrer">
+                    <img 
+                      src={grievance.resolution_photo_url} 
+                      alt="Resolution Proof" 
+                      className="max-w-full sm:max-w-xs rounded-xl border border-emerald-200 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
+                    />
+                  </a>
                 </div>
               )}
 
@@ -328,8 +403,46 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                 </div>
               )}
 
-              {/* Admin Resolution Form Controls */}
+              {/* Assign to Department (Admin only) */}
               {user?.role === 'admin' && (
+                <form
+                  onSubmit={handleAssign}
+                  className="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 space-y-4 mb-4"
+                >
+                  <div className="flex items-center gap-2">
+                    <User size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Forward / Assign Grievance
+                    </h4>
+                  </div>
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Select Department
+                      </label>
+                      <select
+                        value={assignedDept}
+                        onChange={(e) => setAssignedDept(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      >
+                        <option value="none">None (General Admin)</option>
+                        <option value="infra">Infrastructure (Infra Head)</option>
+                        <option value="it_infra">IT Infrastructure (IT Infra Head)</option>
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={assigning}
+                      className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md disabled:opacity-60"
+                    >
+                      {assigning ? 'Assigning...' : 'Assign'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Admin Resolution Form Controls */}
+              {(user?.role === 'admin' || user?.role === 'infra_head' || user?.role === 'it_infra_head') && (
                 <form
                   onSubmit={handleStatusUpdate}
                   className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-4"
@@ -371,6 +484,42 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                       />
                     </div>
                   </div>
+                  
+                  {newStatus === 'resolved' && (
+                    <div className="mt-4">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Upload Resolution Proof Photo (Optional)
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={fileInputRef}
+                          className="hidden"
+                          onChange={handlePhotoUpload}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-semibold hover:bg-indigo-100 transition-colors"
+                        >
+                          {resolutionPhoto && resolutionPhoto.startsWith('data:') ? 'Change Photo' : 'Select Photo'}
+                        </button>
+                        {resolutionPhoto && resolutionPhoto.startsWith('data:') && (
+                          <div className="flex items-center gap-2">
+                            <img src={resolutionPhoto} alt="Resolution" className="h-10 w-10 object-cover rounded-lg border border-slate-200" />
+                            <button
+                              type="button"
+                              onClick={() => setResolutionPhoto(null)}
+                              className="text-xs text-rose-500 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex justify-end pt-2">
                     <button
@@ -384,99 +533,7 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                 </form>
               )}
 
-              {/* Discussion & Live Comments Thread */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                      <MessageSquare size={16} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Discussion & Real-Time Updates
-                      </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Direct communication channel between Submitter and Department Administration
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                    {grievance.comments?.length || 0} messages
-                  </span>
-                </div>
-
-                {/* Messages List */}
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                  {grievance.comments && grievance.comments.length > 0 ? (
-                    grievance.comments.map((c, idx) => {
-                      const isAdminMsg = c.author_role === 'admin';
-                      return (
-                        <div
-                          key={c.id || idx}
-                          className={`p-3.5 rounded-2xl border transition-all ${
-                            isAdminMsg
-                              ? 'bg-purple-50/60 dark:bg-purple-950/30 border-purple-200/80 dark:border-purple-800/50 ml-4 sm:ml-8'
-                              : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60 mr-4 sm:mr-8'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-slate-900 dark:text-white">
-                                {c.author_name}
-                              </span>
-                              <span
-                                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                                  isAdminMsg
-                                    ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300'
-                                    : 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300'
-                                }`}
-                              >
-                                {isAdminMsg ? 'HOD / Admin' : c.author_role?.toUpperCase()}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                            {c.message}
-                          </p>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="py-6 text-center text-slate-400 text-xs">
-                      No messages yet. Ask a question or post a progress update below.
-                    </div>
-                  )}
-                </div>
-
-                {commentError && (
-                  <p className="text-xs text-rose-500 font-medium">{commentError}</p>
-                )}
-
-                {/* Comment Input Box */}
-                <form onSubmit={handleSendComment} className="pt-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Write an update or reply... (Press Enter to send)"
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      disabled={postingComment}
-                      className="flex-1 px-4 py-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!commentText.trim() || postingComment}
-                      className="px-4 py-2.5 rounded-xl bg-[#1B2A4A] hover:bg-[#24375D] text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none active:scale-95"
-                    >
-                      <Send size={13} className="text-[#D4A017]" />
-                      <span className="hidden sm:inline">Send</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
+              {/* Discussion & Live Comments Thread Removed per request */}
             </>
           )}
         </div>

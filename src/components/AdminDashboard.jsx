@@ -5,6 +5,7 @@ import { apiRequest } from '@/lib/api-client';
 import { useAuth } from '@/context/AuthContext';
 import StatusBadge from './StatusBadge';
 import GrievanceDetailModal from './GrievanceDetailModal';
+import SolveGrievanceModal from './SolveGrievanceModal';
 import AnnouncementBoard from './AnnouncementBoard';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { 
@@ -31,7 +32,9 @@ import {
   BarChart3,
   Megaphone,
   MessageSquare,
-  Send
+  Send,
+  Eye,
+  Camera
 } from 'lucide-react';
 
 export default function AdminDashboard({ sidebarTab }) {
@@ -49,7 +52,7 @@ export default function AdminDashboard({ sidebarTab }) {
   const [grievanceError, setGrievanceError] = useState('');
   
   // Filter states
-  const [yearFilter, setYearFilter] = useState('1'); // '1' | '2' | '3' | '4'
+  const [yearFilter, setYearFilter] = useState('all'); // 'all' | '1' | '2' | '3' | '4'
   const [branchFilter, setBranchFilter] = useState('all'); // 'all' | 'AIML' | 'AI'
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -58,6 +61,8 @@ export default function AdminDashboard({ sidebarTab }) {
 
   // Selected grievance for modal
   const [selectedGrievanceId, setSelectedGrievanceId] = useState(null);
+  const [solvingGrievance, setSolvingGrievance] = useState(null);
+  const [assigningId, setAssigningId] = useState(null);
 
   // User management states
   const [usersList, setUsersList] = useState([]);
@@ -193,6 +198,30 @@ export default function AdminDashboard({ sidebarTab }) {
     }
   };
 
+  const handleDirectAssign = async (grievanceId, department, e) => {
+    if (e) e.stopPropagation();
+    const deptValue = department === 'none' || !department ? null : department;
+    setAssigningId(grievanceId);
+    try {
+      const res = await apiRequest(`/api/grievances/${grievanceId}/assign`, {
+        method: 'PATCH',
+        body: JSON.stringify({ assigned_department: deptValue }),
+      });
+      if (res.success) {
+        setGrievances((prev) =>
+          prev.map((g) =>
+            (g.id || g._id) === grievanceId ? { ...g, assigned_department: deptValue } : g
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Direct assign failed:', err);
+      alert(err.message || 'Failed to assign grievance');
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
   const loadUsers = async () => {
     setLoadingUsers(true);
     setUserError('');
@@ -305,13 +334,26 @@ export default function AdminDashboard({ sidebarTab }) {
         <div className="relative z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-6 p-6 sm:p-8">
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-red-50 text-red-600 border border-red-200 shadow-sm">
-              <ShieldCheck size={14} /> HOD &amp; Central Redressal Committee • All 4 Academic Years
+              <ShieldCheck size={14} />
+              {user?.role === 'infra_head'
+                ? 'Campus Infrastructure Resolution Portal • Head Office'
+                : user?.role === 'it_infra_head'
+                ? 'IT Systems & Infrastructure Portal • Systems Head'
+                : 'HOD & Central Redressal Committee • All 4 Academic Years'}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800">
-              AI &amp; AIML Department Grievance Control Center
+              {user?.role === 'infra_head'
+                ? 'Campus Infrastructure Maintenance Board'
+                : user?.role === 'it_infra_head'
+                ? 'IT & Systems Infrastructure Resolution Board'
+                : 'AI & AIML Department Grievance Control Center'}
             </h1>
             <p className="text-sm text-slate-600 font-medium leading-relaxed max-w-md">
-              Centralized monitoring and grievance resolution across 1st, 2nd, 3rd, and 4th years of Artificial Intelligence &amp; Machine Learning.
+              {user?.role === 'infra_head'
+                ? 'Inspecting and redressing electrical, AC, civil, and physical classroom facilities.'
+                : user?.role === 'it_infra_head'
+                ? 'Managing lab computers, campus networking, software licenses, and projector systems.'
+                : 'Centralized monitoring and grievance resolution across 1st, 2nd, 3rd, and 4th years of Artificial Intelligence & Machine Learning.'}
             </p>
           </div>
 
@@ -320,28 +362,30 @@ export default function AdminDashboard({ sidebarTab }) {
               onClick={() => setActiveTab('grievances')}
               className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${
                 activeTab === 'grievances'
-                  ? 'bg-red-50 text-[#C61A22] shadow-sm border-red-200'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-[#C61A22] border-slate-200 shadow-sm'
+                  ? 'bg-[#C61A22] text-white shadow-md border-[#C61A22]'
+                  : 'bg-white/95 backdrop-blur text-[#1B2A4A] hover:bg-white hover:text-[#C61A22] border-white/50 shadow-[0_4px_12px_rgb(0,0,0,0.06)]'
               }`}
             >
               Grievances ({stats.total})
             </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${
-                activeTab === 'users'
-                  ? 'bg-red-50 text-[#C61A22] shadow-sm border-red-200'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-[#C61A22] border-slate-200 shadow-sm'
-              }`}
-            >
-              CR &amp; Faculty Accounts
-            </button>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all border ${
+                  activeTab === 'users'
+                    ? 'bg-[#C61A22] text-white shadow-md border-[#C61A22]'
+                    : 'bg-white/95 backdrop-blur text-[#1B2A4A] hover:bg-white hover:text-[#C61A22] border-white/50 shadow-[0_4px_12px_rgb(0,0,0,0.06)]'
+                }`}
+              >
+                CR &amp; Faculty Accounts
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('announcements')}
               className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border ${
                 activeTab === 'announcements'
-                  ? 'bg-red-50 text-[#C61A22] shadow-sm border-red-200'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-[#C61A22] border-slate-200 shadow-sm'
+                  ? 'bg-[#C61A22] text-white shadow-md border-[#C61A22]'
+                  : 'bg-white/95 backdrop-blur text-[#1B2A4A] hover:bg-white hover:text-[#C61A22] border-white/50 shadow-[0_4px_12px_rgb(0,0,0,0.06)]'
               }`}
             >
               <Megaphone size={13} /> Announcements
@@ -376,6 +420,7 @@ export default function AdminDashboard({ sidebarTab }) {
                   onChange={(e) => setYearFilter(e.target.value)}
                   className="px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-200 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-[#C61A22]"
                 >
+                  <option value="all">All Years</option>
                   <option value="1">1st Year</option>
                   <option value="2">2nd Year</option>
                   <option value="3">3rd Year</option>
@@ -541,8 +586,9 @@ export default function AdminDashboard({ sidebarTab }) {
                       <th className="py-3 px-4">Cohort</th>
                       <th className="py-3 px-4">Submitter</th>
                       <th className="py-3 px-4">Category</th>
-                      <th className="py-3 px-4">Description</th>
+                      <th className="py-3 px-4">Issue Type</th>
                       <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Assign</th>
                       <th className="py-3 px-4">Date</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
@@ -576,11 +622,48 @@ export default function AdminDashboard({ sidebarTab }) {
                         </td>
                         <td className="py-3.5 px-4 max-w-xs">
                           <p className="line-clamp-2 text-slate-700 dark:text-slate-300">
-                            {g.description}
+                            {g.details?.issue_type || g.description || 'N/A'}
                           </p>
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <StatusBadge status={g.status} />
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {user?.role === 'admin' ? (
+                            <select
+                              value={g.assigned_department || 'none'}
+                              disabled={assigningId === (g.id || g._id)}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => handleDirectAssign(g.id || g._id, e.target.value, e)}
+                              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border outline-none transition-all cursor-pointer shadow-xs disabled:opacity-50 ${
+                                g.assigned_department === 'infra'
+                                  ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100/70 focus:ring-1 focus:ring-amber-400'
+                                  : g.assigned_department === 'it_infra'
+                                  ? 'bg-indigo-50 text-indigo-900 border-indigo-300 hover:bg-indigo-100/70 focus:ring-1 focus:ring-indigo-400'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 focus:ring-1 focus:ring-slate-300'
+                              }`}
+                            >
+                              <option value="none">General Admin</option>
+                              <option value="infra">Infra Head</option>
+                              <option value="it_infra">IT Infra Head</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border ${
+                                g.assigned_department === 'infra'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : g.assigned_department === 'it_infra'
+                                  ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              {g.assigned_department === 'infra'
+                                ? 'Infra Head'
+                                : g.assigned_department === 'it_infra'
+                                ? 'IT Infra Head'
+                                : 'General Admin'}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
                           {new Date(g.created_at).toLocaleDateString('en-US', {
@@ -589,41 +672,47 @@ export default function AdminDashboard({ sidebarTab }) {
                           })}
                         </td>
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {g.status !== 'resolved' && (
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Solve / Mark Resolved Button */}
+                            {g.status !== 'resolved' ? (
                               <button
-                                onClick={(e) => handleQuickStatusUpdate(g.id || g._id, 'resolved', e)}
-                                title="One-Click Mark as Resolved"
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all border border-emerald-200 dark:border-emerald-800/60 active:scale-95 shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSolvingGrievance(g);
+                                }}
+                                title="Mark as Resolved & Upload Photo Proof"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all shadow-sm shadow-emerald-600/20 cursor-pointer"
                               >
                                 <CheckCircle size={13} />
-                                <span className="hidden xl:inline">Resolve</span>
+                                <span>Solve Issue</span>
+                                <Camera size={12} className="opacity-80" />
                               </button>
-                            )}
-                            {g.status === 'pending' && (
+                            ) : (
                               <button
-                                onClick={(e) => handleQuickStatusUpdate(g.id || g._id, 'in_progress', e)}
-                                title="Mark Under Repair / In Progress"
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all border border-blue-200 dark:border-blue-800/60 active:scale-95 shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSolvingGrievance(g);
+                                }}
+                                title="View or update resolution details and proof photo"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer"
                               >
-                                <Clock size={13} />
-                                <span className="hidden xl:inline">Repair</span>
+                                <CheckCircle size={13} />
+                                <span>Solved</span>
+                                {g.resolution_photo_url && (
+                                  <span className="text-[10px] bg-emerald-200/80 dark:bg-emerald-800 px-1 py-0.2 rounded font-semibold flex items-center gap-0.5">
+                                    <Camera size={10} /> Proof
+                                  </span>
+                                )}
                               </button>
                             )}
-                            <button
-                              onClick={(e) => handleOpenMessageModal(g, e)}
-                              title="Send Message to CR / Faculty about this issue"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all border border-indigo-200 dark:border-indigo-800/60 active:scale-95 shadow-sm cursor-pointer"
-                            >
-                              <MessageSquare size={13} />
-                              <span className="hidden xl:inline">Message</span>
-                            </button>
+
+                            {/* Eye Icon for Viewing Grievance */}
                             <button
                               onClick={() => setSelectedGrievanceId(g.id || g._id)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors shadow-sm"
+                              title="View Grievance Details"
+                              className="inline-flex items-center justify-center p-2 rounded-xl text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm cursor-pointer active:scale-95"
                             >
-                              Review
-                              <ArrowUpRight size={13} />
+                              <Eye size={15} />
                             </button>
                           </div>
                         </td>
@@ -1075,6 +1164,15 @@ export default function AdminDashboard({ sidebarTab }) {
         onClose={() => setSelectedGrievanceId(null)}
         onStatusUpdated={loadAllGrievances}
       />
+
+      {/* Quick Solve Grievance & Upload Proof Modal */}
+      {solvingGrievance && (
+        <SolveGrievanceModal
+          grievance={solvingGrievance}
+          onClose={() => setSolvingGrievance(null)}
+          onSuccess={loadAllGrievances}
+        />
+      )}
     </div>
   );
 }

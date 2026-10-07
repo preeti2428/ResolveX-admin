@@ -1,12 +1,220 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { apiRequest } from '@/lib/api-client';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 import AdminDashboard from '@/components/AdminDashboard';
 import AdminLoginPage from '@/components/AdminLoginPage';
 import AnnouncementBoard from '@/components/AnnouncementBoard';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import { Trash2, Shield, Mail, Building, CheckCircle2, AlertCircle } from 'lucide-react';
+
+function MyProfileView() {
+  const { user, updateUser } = useAuth();
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be under 10MB.');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        // Optimize to max 400x400 square for compact storage
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const base64Url = canvas.toDataURL('image/jpeg', 0.85);
+
+        try {
+          const res = await apiRequest('/api/users/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({ avatar_url: base64Url }),
+          });
+
+          if (res.success) {
+            updateUser({ avatar_url: base64Url });
+            setSuccess('Profile photo updated successfully!');
+            setTimeout(() => setSuccess(''), 4000);
+          } else {
+            setError(res.message || 'Failed to update profile photo.');
+          }
+        } catch (err) {
+          setError(err.message || 'Error uploading profile photo.');
+        } finally {
+          setUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = async () => {
+    setUploading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await apiRequest('/api/users/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ avatar_url: null }),
+      });
+
+      if (res.success) {
+        updateUser({ avatar_url: null });
+        setSuccess('Profile photo removed.');
+        setTimeout(() => setSuccess(''), 4000);
+      } else {
+        setError(res.message || 'Failed to remove photo.');
+      }
+    } catch (err) {
+      setError(err.message || 'Error removing photo.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="p-6 sm:p-10 animate-fade-in max-w-4xl mx-auto">
+      <h1 className="text-2xl font-extrabold text-slate-800 mb-6">Administrator Profile</h1>
+
+      {success && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2.5 font-medium shadow-sm">
+          <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2.5 font-medium shadow-sm">
+          <AlertCircle size={18} className="text-rose-600 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 text-center shadow-sm">
+        {/* Circular Avatar Container */}
+        <div className="relative inline-block mx-auto mb-5">
+          <div
+            style={{ width: '128px', height: '128px', backgroundColor: '#FB7185', borderColor: '#93C5FD' }}
+            onClick={() => fileInputRef.current?.click()}
+            className="w-32 h-32 rounded-full overflow-hidden aspect-square border-[6px] shadow-xl flex items-center justify-center text-white select-none transition-transform hover:scale-[1.02] cursor-pointer"
+            title="Upload Profile Photo"
+          >
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.name || 'User'}
+                className="w-full h-full object-cover rounded-full"
+              />
+            ) : (
+              <span style={{ fontSize: '64px', lineHeight: 1 }} className="font-black tracking-tight text-white mb-2">
+                {user.name ? user.name.trim().charAt(0).toUpperCase() : 'A'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+
+        {/* Remove Photo (Only shown if photo is currently uploaded) */}
+        {user.avatar_url && (
+          <div className="mb-4">
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={handleRemovePhoto}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <Trash2 size={12} />
+              Remove Photo
+            </button>
+          </div>
+        )}
+
+        {/* User Identity Details */}
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+          {user.name}
+        </h2>
+
+        <p className={`text-sm font-medium text-slate-500 mt-1 flex items-center justify-center gap-1.5 ${!user.year ? 'mb-10' : ''}`}>
+          <Mail size={14} className="text-slate-400" />
+          {user.email}
+        </p>
+
+        {user.year && (
+          <p className="text-xs text-slate-400 mt-1 mb-10">
+            Year {user.year} • Section {user.section || 'A'}
+          </p>
+        )}
+
+        {/* Detailed Info Grid */}
+        <div className="mt-10 pt-10 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Department</p>
+            <p className="text-sm font-bold text-slate-800 mt-1 flex items-center gap-1.5">
+              <Building size={14} className="text-[#1B2A4A]" />
+              {user.department === 'AIML' ? 'AI / AI&ML' : (user.department || 'AI / AI&ML')}
+            </p>
+          </div>
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Role Authority</p>
+            <p className="text-sm font-bold text-slate-800 mt-1 flex items-center gap-1.5">
+              <Shield size={14} className="text-[#D4A017]" />
+              {user.role === 'cr' ? 'Class Representative' : user.role === 'teacher' ? 'Department Faculty' : 'System Admin'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AdminRouter() {
   const { user, loading, logout } = useAuth();
@@ -27,7 +235,7 @@ function AdminRouter() {
     return <AdminLoginPage />;
   }
 
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' && user.role !== 'infra_head' && user.role !== 'it_infra_head') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0F172A] text-white">
         <div className="max-w-md w-full bg-[#1E293B] border border-red-500/30 p-8 rounded-2xl text-center shadow-2xl">
@@ -69,19 +277,7 @@ function AdminRouter() {
           </div>
         );
       case 'My Profile':
-        return (
-          <div className="p-8 max-w-5xl mx-auto">
-            <h1 className="text-2xl font-extrabold text-slate-800 mb-6">Administrator Profile</h1>
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 shadow-sm">
-              <div className="w-20 h-20 rounded-full bg-rose-500 text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-md">
-                {user.name ? user.name[0] : 'A'}
-              </div>
-              <h2 className="text-xl font-bold text-slate-800">{user.name}</h2>
-              <p className="text-xs text-rose-600 font-semibold uppercase tracking-wider mt-1">{user.role} • {user.department || 'AIML'}</p>
-              <p className="text-sm text-slate-400 mt-1">{user.email}</p>
-            </div>
-          </div>
-        );
+        return <MyProfileView />;
       default:
         return <AdminDashboard sidebarTab={activeTab} />;
     }

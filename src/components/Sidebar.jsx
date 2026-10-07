@@ -3,8 +3,7 @@ import {
   LayoutDashboard,
   FileText,
   Megaphone,
-  User,
-  Settings
+  User
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -13,11 +12,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     { name: 'Grievances', icon: FileText },
     { name: 'Announcements', icon: Megaphone },
     { name: 'My Profile', icon: User },
-    { name: 'Settings', icon: Settings },
   ];
 
   return (
-    <aside className="w-64 flex-shrink-0 hidden md:flex flex-col border-r border-slate-200/60 bg-transparent py-8 px-4 h-[calc(100vh-4rem)] sticky top-16">
+    <aside className="w-64 flex-shrink-0 hidden md:flex flex-col border-r border-slate-200/60 bg-transparent py-8 px-4">
       <nav className="flex-1 space-y-2.5">
         {navItems.map((item) => {
           const isActive = activeTab === item.name;
