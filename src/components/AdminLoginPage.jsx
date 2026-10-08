@@ -4,7 +4,7 @@ import { ShieldCheck, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'l
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function AdminLoginPage() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, logout } = useAuth();
   const [email, setEmail] = useState('admin@aiml.edu');
   const [password, setPassword] = useState('Admin@123');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +20,9 @@ export default function AdminLoginPage() {
       const res = await login(email, password, null);
       if (!res.success) {
         setError(res.message || 'Login failed.');
+      } else if (res.user && !['admin', 'infra_head', 'it_infra_head'].includes(res.user.role)) {
+        logout();
+        setError('Access Restricted: Only Authorities (Admin/Infra) can log in to this portal.');
       }
     } catch (err) {
       setError(err.message || 'Unable to connect to backend server. Make sure backend is running on port 5000.');
@@ -32,7 +35,11 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError('');
     try {
-      await loginWithGoogle(credentialResponse.credential);
+      const res = await loginWithGoogle(credentialResponse.credential);
+      if (res.success && res.user && !['admin', 'infra_head', 'it_infra_head'].includes(res.user.role)) {
+        logout();
+        setError('Access Restricted: Only Authorities (Admin/Infra) can log in to this portal.');
+      }
     } catch (err) {
       setError(err.message || 'Google Login failed.');
     } finally {
@@ -140,30 +147,6 @@ export default function AdminLoginPage() {
             <span>HOD: admin@aiml.edu</span>
             <span className="text-slate-400">Pass: Admin@123</span>
           </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('infra@aiml.edu');
-                setPassword('Infra@123');
-                setError('');
-              }}
-              className="py-1.5 px-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-amber-300 font-medium transition-colors text-center"
-            >
-              Infra: infra@aiml.edu
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('it_infra@aiml.edu');
-                setPassword('ItInfra@123');
-                setError('');
-              }}
-              className="py-1.5 px-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-indigo-300 font-medium transition-colors text-center"
-            >
-              IT: it_infra@aiml.edu
-            </button>
-          </div>
         </div>
 
         {/* Google SSO */}

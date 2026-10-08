@@ -588,7 +588,7 @@ export default function AdminDashboard({ sidebarTab }) {
                       <th className="py-3 px-4">Category</th>
                       <th className="py-3 px-4">Issue Type</th>
                       <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Assign</th>
+                      {user?.role === 'admin' && <th className="py-3 px-4">Assign</th>}
                       <th className="py-3 px-4">Date</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
@@ -628,8 +628,8 @@ export default function AdminDashboard({ sidebarTab }) {
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <StatusBadge status={g.status} />
                         </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          {user?.role === 'admin' ? (
+                        {user?.role === 'admin' && (
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             <select
                               value={g.assigned_department || 'none'}
                               disabled={assigningId === (g.id || g._id)}
@@ -647,24 +647,8 @@ export default function AdminDashboard({ sidebarTab }) {
                               <option value="infra">Infra Head</option>
                               <option value="it_infra">IT Infra Head</option>
                             </select>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border ${
-                                g.assigned_department === 'infra'
-                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                  : g.assigned_department === 'it_infra'
-                                  ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                                  : 'bg-slate-100 text-slate-600 border-slate-200'
-                              }`}
-                            >
-                              {g.assigned_department === 'infra'
-                                ? 'Infra Head'
-                                : g.assigned_department === 'it_infra'
-                                ? 'IT Infra Head'
-                                : 'General Admin'}
-                            </span>
-                          )}
-                        </td>
+                          </td>
+                        )}
                         <td className="py-3.5 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
                           {new Date(g.created_at).toLocaleDateString('en-US', {
                             month: 'short',
