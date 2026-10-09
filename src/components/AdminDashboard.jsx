@@ -339,6 +339,8 @@ export default function AdminDashboard({ sidebarTab }) {
                 ? 'Campus Infrastructure Resolution Portal • Head Office'
                 : user?.role === 'it_infra_head'
                 ? 'IT Systems & Infrastructure Portal • Systems Head'
+                : user?.role === 'ac_incharge'
+                ? 'Air Conditioning & HVAC Resolution Portal • AC Incharge'
                 : 'HOD & Central Redressal Committee • All 4 Academic Years'}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800">
@@ -346,13 +348,17 @@ export default function AdminDashboard({ sidebarTab }) {
                 ? 'Campus Infrastructure Maintenance Board'
                 : user?.role === 'it_infra_head'
                 ? 'IT & Systems Infrastructure Resolution Board'
+                : user?.role === 'ac_incharge'
+                ? 'Air Conditioning & HVAC Grievance Board'
                 : 'AI & AIML Department Grievance Control Center'}
             </h1>
             <p className="text-sm text-slate-600 font-medium leading-relaxed max-w-md">
               {user?.role === 'infra_head'
-                ? 'Inspecting and redressing electrical, AC, civil, and physical classroom facilities.'
+                ? 'Inspecting and redressing electrical, civil, and physical classroom facilities.'
                 : user?.role === 'it_infra_head'
                 ? 'Managing lab computers, campus networking, software licenses, and projector systems.'
+                : user?.role === 'ac_incharge'
+                ? 'Inspecting and maintaining air conditioning, HVAC cooling, and ventilation units across department facilities.'
                 : 'Centralized monitoring and grievance resolution across 1st, 2nd, 3rd, and 4th years of Artificial Intelligence & Machine Learning.'}
             </p>
           </div>
@@ -640,12 +646,15 @@ export default function AdminDashboard({ sidebarTab }) {
                                   ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100/70 focus:ring-1 focus:ring-amber-400'
                                   : g.assigned_department === 'it_infra'
                                   ? 'bg-indigo-50 text-indigo-900 border-indigo-300 hover:bg-indigo-100/70 focus:ring-1 focus:ring-indigo-400'
+                                  : (g.assigned_department === 'ac_incharge' || g.assigned_department === 'ac')
+                                  ? 'bg-cyan-50 text-cyan-900 border-cyan-300 hover:bg-cyan-100/70 focus:ring-1 focus:ring-cyan-400'
                                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 focus:ring-1 focus:ring-slate-300'
                               }`}
                             >
                               <option value="none">General Admin</option>
-                              <option value="infra">Infra Head</option>
-                              <option value="it_infra">IT Infra Head</option>
+                              <option value="infra">Infra Incharge</option>
+                              <option value="it_infra">IT infra Incharge</option>
+                              <option value="ac_incharge">Ac Incharge</option>
                             </select>
                           </td>
                         )}

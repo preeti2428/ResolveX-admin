@@ -426,8 +426,9 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                         className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none"
                       >
                         <option value="none">None (General Admin)</option>
-                        <option value="infra">Infrastructure (Infra Head)</option>
-                        <option value="it_infra">IT Infrastructure (IT Infra Head)</option>
+                        <option value="infra">Infra Incharge</option>
+                        <option value="it_infra">IT infra Incharge</option>
+                        <option value="ac_incharge">Ac Incharge</option>
                       </select>
                     </div>
                     <button
@@ -442,7 +443,7 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
               )}
 
               {/* Admin Resolution Form Controls */}
-              {(user?.role === 'admin' || user?.role === 'infra_head' || user?.role === 'it_infra_head') && (
+              {(user?.role === 'admin' || user?.role === 'infra_head' || user?.role === 'it_infra_head' || user?.role === 'ac_incharge') && (
                 <form
                   onSubmit={handleStatusUpdate}
                   className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-4"
@@ -450,7 +451,13 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={18} className="text-purple-600 dark:text-purple-400" />
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                      HOD / Admin Grievance Action
+                      {user?.role === 'infra_head'
+                        ? 'Campus Infrastructure Action & Resolution'
+                        : user?.role === 'it_infra_head'
+                        ? 'IT Infrastructure Action & Resolution'
+                        : user?.role === 'ac_incharge'
+                        ? 'Air Conditioning & HVAC Action & Resolution'
+                        : 'HOD / Admin Grievance Action'}
                     </h4>
                   </div>
 

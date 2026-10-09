@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { apiRequest } from '@/lib/api-client';
@@ -219,6 +219,16 @@ function MyProfileView() {
 function AdminRouter() {
   const { user, loading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const prevUserIdRef = useRef(user?._id || user?.id);
+
+  // Always reset to Dashboard page whenever user logs out or signs in with any role
+  useEffect(() => {
+    const currentId = user?._id || user?.id;
+    if (!user || currentId !== prevUserIdRef.current) {
+      setActiveTab('Dashboard');
+    }
+    prevUserIdRef.current = currentId;
+  }, [user]);
 
   if (loading) {
     return (
@@ -235,7 +245,7 @@ function AdminRouter() {
     return <AdminLoginPage />;
   }
 
-  if (user.role !== 'admin' && user.role !== 'infra_head' && user.role !== 'it_infra_head') {
+  if (user.role !== 'admin') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0F172A] text-white">
         <div className="max-w-md w-full bg-[#1E293B] border border-red-500/30 p-8 rounded-2xl text-center shadow-2xl">
