@@ -22,7 +22,7 @@ import {
   CornerDownLeft
 } from 'lucide-react';
 
-export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpdated }) {
+export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpdated, readOnly = false }) {
   const { user } = useAuth();
   const [grievance, setGrievance] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -403,8 +403,34 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                 </div>
               )}
 
-              {/* Assign to Department (Admin only) */}
-              {user?.role === 'admin' && (
+              {/* In readOnly mode (Tracking view), display read-only Assigned Incharge box */}
+              {readOnly && (
+                <div className="p-4 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-800/50 flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <User size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Assigned Authority / Incharge
+                      </span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        {grievance.assigned_department === 'infra'
+                          ? 'Infra Incharge'
+                          : grievance.assigned_department === 'it_infra'
+                          ? 'IT Infra Incharge'
+                          : grievance.assigned_department === 'ac_incharge' || grievance.assigned_department === 'ac'
+                          ? 'AC Incharge'
+                          : 'General Admin / Not Assigned'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 shadow-sm">
+                    {grievance.assigned_department && grievance.assigned_department !== 'none' ? 'Assigned' : 'Unassigned'}
+                  </span>
+                </div>
+              )}
+
+              {/* Assign to Department (Admin only) - Hidden in readOnly tracking view */}
+              {!readOnly && user?.role === 'admin' && (
                 <form
                   onSubmit={handleAssign}
                   className="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 space-y-4 mb-4"
@@ -442,8 +468,8 @@ export default function GrievanceDetailModal({ grievanceId, onClose, onStatusUpd
                 </form>
               )}
 
-              {/* Admin Resolution Form Controls */}
-              {(user?.role === 'admin' || user?.role === 'infra_head' || user?.role === 'it_infra_head' || user?.role === 'ac_incharge') && (
+              {/* Admin Resolution Form Controls - Hidden in readOnly tracking view */}
+              {!readOnly && (user?.role === 'admin' || user?.role === 'infra_head' || user?.role === 'it_infra_head' || user?.role === 'ac_incharge') && (
                 <form
                   onSubmit={handleStatusUpdate}
                   className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-4"
