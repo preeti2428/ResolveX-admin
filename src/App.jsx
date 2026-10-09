@@ -8,6 +8,7 @@ import AdminDashboard from '@/components/AdminDashboard';
 import AdminLoginPage from '@/components/AdminLoginPage';
 import AnnouncementBoard from '@/components/AnnouncementBoard';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import TrackingDashboard from '@/components/TrackingDashboard';
 import { Trash2, Shield, Mail, Building, CheckCircle2, AlertCircle } from 'lucide-react';
 
 function MyProfileView() {
@@ -286,6 +287,8 @@ function AdminRouter() {
             <AnnouncementBoard />
           </div>
         );
+      case 'Tracking':
+        return <TrackingDashboard />;
       case 'My Profile':
         return <MyProfileView />;
       default:

@@ -3,13 +3,15 @@ import {
   LayoutDashboard,
   FileText,
   Megaphone,
-  User
+  User,
+  Activity
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
     { name: 'Grievances', icon: FileText },
+    { name: 'Tracking', icon: Activity },
     { name: 'Announcements', icon: Megaphone },
     { name: 'My Profile', icon: User },
   ];
