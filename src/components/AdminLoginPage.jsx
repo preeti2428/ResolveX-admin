@@ -15,8 +15,8 @@ import { GoogleLogin } from '@react-oauth/google';
 
 export default function AdminLoginPage() {
   const { login, loginWithGoogle, logout } = useAuth();
-  const [email, setEmail] = useState('admin@aiml.edu');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState(import.meta.env.VITE_ADMIN_EMAIL || '');
+  const [password, setPassword] = useState(import.meta.env.VITE_ADMIN_PASSWORD || '');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
